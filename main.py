@@ -344,6 +344,46 @@ def modification(idtarget):
     conn.commit()
     conn.close()
 
+
+
+
+def afficher_parents_enfants(id_personne):
+    conn = sqlite3.connect('arbre.db')
+    cur = conn.cursor()
+    
+    # Récupérer les informations sur la personne spécifiée
+    cur.execute("SELECT * FROM Personne WHERE id = ?", (id_personne,))
+    personne = cur.fetchone()
+    if personne:
+        # Afficher les parents
+        idfather = personne[13]
+        idmother = personne[14]
+        if idfather or idmother:
+            print("Parents:")
+            if idfather:
+                cur.execute("SELECT * FROM Personne WHERE id = ?", (idfather,))
+                pere = cur.fetchone()
+                print(f"Père: {pere[1]} {pere[2]}")
+            if idmother:
+                cur.execute("SELECT * FROM Personne WHERE id = ?", (idmother,))
+                mere = cur.fetchone()
+                print(f"Mère: {mere[1]} {mere[2]}")
+        else:
+            print("Aucun parent trouvé.")
+        
+        # Afficher les enfants
+        cur.execute("SELECT * FROM Personne WHERE idfather = ? OR idmother = ?", (id_personne, id_personne))
+        enfants = cur.fetchall()
+        if enfants:
+            print("Enfants:")
+            for enfant in enfants:
+                print(f"{enfant[1]} {enfant[2]}")
+        else:
+            print("Aucun enfant trouvé.")
+    else:
+        print("Personne non trouvée.")
+
+    conn.close()
 #la fonction va créer un fichier arbre.db ou écraser l'ancien fichier arbre pour un vierge
 renitialisation(1)
 renitialisation(2)
