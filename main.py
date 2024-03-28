@@ -1,5 +1,6 @@
 import sqlite3
 import datetime
+import re
 # on a besoin de cette bibliothèque pour manipuler sql
 # on creer la fonction qui va elle meme creer deux table la premiere qui est la table des element de l arbre
 # 1 mother and 0 father
@@ -70,7 +71,21 @@ def saisie_boolean():
         except ValueError as e:
             print(e)
 
-
+def choisir_option(options):
+    print("Options disponibles :")
+    for i, option in enumerate(options, start=1):
+        print(f"{i}. {option}")
+    print("0. Quitter")
+    
+    while True:
+        choix = input("Choisissez une option (ou tapez 0 pour quitter) : ")
+        if choix == '0':
+            print("Annulation")
+            return None
+        elif choix.isdigit() and 0 < int(choix) <= len(options):
+            return options[int(choix) - 1]
+        else:
+            print("Option invalide. Veuillez choisir une option valide.")
 
 # la fonction en parametre le nom d une des table et un tuple (un ensenble de variable comme un tableau)
 # la fonction verifie uniquement si le nom de la table est bien saisi et que la taille du tuple correspond à la table
@@ -106,21 +121,21 @@ def insertion(table, tuple):
 
 # la fonction modification prend en paramètre la table de la cible, les nouvelles information dans quel catégorie et
 # enfin id de la cible
-def modification(table, tuple, category, idtarget):
-    if table == 'Personne' or table == 'Identite':
-        if len(tuple) == len(category):
-            conn = sqlite3.connect('arbre.db')
-            cur = conn.cursor()
-            for i in range(len(tuple)):
-                a = tuple[i]
-                b = category[i]
-                sql = f"UPDATE {table} SET {b} = ? WHERE id = ?"
-                cur.execute(sql, (a, idtarget))
-            conn.commit()
-            conn.close()
-            return True
-    else:
-        return False
+#def modification(table, tuple, category, idtarget):
+#    if table == 'Personne' or table == 'Identite':
+#        if len(tuple) == len(category):
+#            conn = sqlite3.connect('arbre.db')
+#            cur = conn.cursor()
+#            for i in range(len(tuple)):
+#                a = tuple[i]
+#                b = category[i]
+#                sql = f"UPDATE {table} SET {b} = ? WHERE id = ?"
+#                cur.execute(sql, (a, idtarget))
+#            conn.commit()
+#            conn.close()
+#            return True
+#    else:
+#        return False
     
 
 def eleminationPersonne(idtarget):
@@ -260,10 +275,74 @@ def insertion_Personne():
 
 
 
-def modif_Personne():
-    takecolumn = 0
-    return False
 
+def modification(idtarget):
+    conn = sqlite3.connect('arbre.db')
+    cur = conn.cursor()
+    
+    # Récupérer les noms des colonnes de la table (en excluant la colonne "id")
+    cur.execute(f"PRAGMA table_info(Personne)")
+    colonnes = [row[1] for row in cur.fetchall() if row[1] != 'id']
+    
+    valeurs_liste = []
+    
+     # Afficher les colonnes disponibles
+    print("Colonnes disponibles :")
+    for i, colonne in enumerate(colonnes, start=1):
+        print(f"{i}. {colonne}")
+    
+    # Demander à l'utilisateur de choisir les colonnes à modifier
+    choix = input("Entrez les numéros des colonnes à modifier séparés par des virgules (ex: 1,3,5) : ")
+    choix_liste = choix.split(',')
+    
+    # Vérifier si les colonnes choisies sont valides
+    try:
+        colonnes_modif = [colonne.strip() for colonne in choix_liste]
+        colonnes_modif = [int(colonne) - 1 for colonne in colonnes_modif]
+        for index in colonnes_modif:
+            if index < 0 or index >= len(colonnes):
+                raise ValueError("Numéro de colonne invalide.")
+    except ValueError as e:
+        print("Erreur:", e)
+        return
+    
+    # Demander à l'utilisateur de saisir les nouvelles valeurs pour chaque colonne choisie
+    for index in colonnes_modif:
+        colonne = colonnes[index]
+        valeur = input(f"Entrez la nouvelle valeur pour {colonne} : ")
+        
+        # Vérifier les contraintes sur les valeurs saisies
+        if colonne == 'birthday':
+            if not re.match(r'^\d{4}-\d{2}-\d{2}$', valeur):
+                print("Format de date invalide. Utilisez le format YYYY-MM-DD.")
+                return
+        elif colonne == 'phone':
+            if not re.match(r'^\d{10}$', valeur):
+                print("Numéro de téléphone invalide. Il doit contenir 10 chiffres.")
+                return
+        elif colonne == 'gender':
+            if valeur.lower() not in ['true', 'false']:
+                    child =cur.execute("""SELECT * FROM Personne
+                                       WHERE idfather = ? OR idmother = ?""", (idtarget, idtarget))
+                    if(child != None):
+                        print("Genre invalide. Utilisez 'True' ou 'False'.")
+                        return
+        
+        valeurs_liste.append(valeur)
+    
+    # Construire la requête SQL
+    sql = f"UPDATE Personne SET "
+    for i, index in enumerate(colonnes_modif):
+        colonne = colonnes[index]
+        sql += f"{colonne} = ?"
+        if i < len(colonnes_modif) - 1:
+            sql += ", "
+    sql += f" WHERE id = ?"
+    
+    # Exécuter la requête SQL
+    cur.execute(sql, valeurs_liste + [idtarget])
+    conn.commit()
+    conn.close()
 
 #la fonction va créer un fichier arbre.db ou écraser l'ancien fichier arbre pour un vierge
 renitialisation(1)
@@ -290,13 +369,13 @@ user= ('admin',)
 res = cur.execute("""SELECT password FROM Identite
     Where username = ? """, user)
 print(res.fetchone())
-modification('Personne', ('Tonton', 'Paul'), ('fname', 'lname'), 1)
+modification(1)
 res = cur.execute("""SELECT fname, lname FROM Personne""")
 print(res.fetchone())
 
 res = cur.execute("""SELECT * FROM Personne""")
 print(res.fetchall())
-noeud_suppression('Personne', 1)
+#noeud_suppression('Personne', 1)
 
 res = cur.execute("""SELECT * FROM Personne""")
 print(res.fetchall())
@@ -309,5 +388,5 @@ conn.close()
 
 #eleminationPersonne(2)
 #res = show( 'Dupont', 'Jeanne')
-print(res)
+#print(res)
 size_tree()
