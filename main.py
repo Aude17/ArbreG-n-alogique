@@ -261,18 +261,15 @@ def insertion_Personne():
         print("Valider vous la saisi ?")
         print(firstname+' '+lastname+' ,est une femme : '+sex+' la personne vie au '+address+' et est de nationalité: '+national+ ' la personne est né le :'+birth)
         validation = saisie_boolean
+     insertion('Personne', (firstname, lastname, sex, address, telefon, national, birth, fathname, fathbirthday, mothname, mothbirthday, ))
 
-    #validation va être utiliser dans le reste de la fonction ouisqu'ellle à fait son rôle avant
-    print(' la personne à des parents ?')
-    if( saisie_boolean() == True):
-        takeuname = input("Entrez le prenom de la personne: ")
-        take2name = input("Entrez le nom de famille")
-        res = show('Personne', takeuname, take2name)
-        result = [ line for line in res if res[4] == True]
-        
-
-
-
+def visionglobal():
+    conn = sqlite3.connect('arbre.db')
+    cur = conn.cursor()
+    cur.execute("""SELECT * FROM Personne""")
+    res = cur.fetchall()
+    for i in res:
+        print(i[0]+' '+i[1]+' '+i[2]+' ,est une femme : '+i[3]+' la personne vie au '+i[4]+' et est de nationalité: '+i[5]+ ' la personne est né le :'+i[6]+ ' l id du pere' +i[13]+ ' l id de la mere'+ i[14])
 
 
 
